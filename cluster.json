@@ -29,7 +29,7 @@
         "time": "4:00:00",
         "mem": "16G"
     },
-    "rmdup_pe":
+    "rmdup":
     {
         "partition": "short",
         "time": "4:00:00",

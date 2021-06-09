@@ -1,13 +1,13 @@
-#bed file with consensus peaks to test for AI (no "chr" in chromosome names)
+# bed file with consensus peaks to test for AI (no "chr" in chromosome names)
 peaks: data/peaks/AR/consensus/AR.consensus.stratas.bed
 
-#file wtih sample names and group annotations (0 or 1) for stratAS
+# file wtih sample names and group annotations (0 or 1) for stratAS
 samples: run_files/samples.AR.txt
 
-#motif file to use as control for motif vs AI analysis.
+# motif file to use as control for motif vs AI analysis
 control_motif: misc/Nanog.ctrl.motif 
 
-#files for annotating cwas results:
+# files for annotating cwas results:
 tss: misc/hg19.refGene.tss.tsv
 HiChIP: misc/LNCaP_FitHiChIP.interactions_FitHiC_Q0.01_IGV.bed #H3K27ac HiChIP data from LNCaP
 peaks1: misc/LNCaP_parental_AR.rep1_sorted_peaks.narrowPeak.bed #AR ChIP-seq data from LNCaP
@@ -28,6 +28,9 @@ bowtie2_index: /home/scb20/ref/hg19/bowtie2_idx/GRCh37
 
 # prefix for bwa reference genome index
 bwa_index: /home/scb20/ref/hg19/bwa_idx/hg19.fa
+
+# type of sequencing (specify "paired" or "single"). This is used in the WASP remapping steps.
+seq_type: single
 
 # bam files for each sample (eg, ChIP-seq data)
 bams:
