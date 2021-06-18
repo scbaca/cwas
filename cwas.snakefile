@@ -318,7 +318,7 @@ rule merge_params:
 		cat {input.global_params} | grep -v $'^ID\tPHI' >> {output.global_params}
 		printf 'ID\tCHR\tP0\tP1\tCNV\tPHI\tMU\tN\n' > {output.local_params}
 		cat {input.local_params} | grep -v $'^ID\tCHR' >> {output.local_params} 
-		Rscript scripts/plot_params.R {input.local_params} {input.global_params} {output.plot1} {output.plot2}"""
+		Rscript scripts/plot_params.R {output.local_params} {output.global_params} {output.plot1} {output.plot2}"""
 
 rule merge_counts:
 	"""merge stratAS-formatted read count files for all samples"""
