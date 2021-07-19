@@ -140,18 +140,11 @@ rule find_intersecting_snps:
 	shell:
 		""" if [[ "{params.seq_type}" == "single" ]]
 		then
-			python {config[wasp_dir]}/mapping/find_intersecting_snps.py
-			  --is_sorted
-			  --output_dir analysis/wasp/find_intersecting_snps/{wildcards.sample}
-			  --snp_dir analysis/wasp/variants/{wildcards.sample} {input.bam} > {output.log}
+			python {config[wasp_dir]}/mapping/find_intersecting_snps.py --is_sorted --output_dir analysis/wasp/find_intersecting_snps/{wildcards.sample} --snp_dir analysis/wasp/variants/{wildcards.sample} {input.bam} > {output.log}
 			mv analysis/wasp/find_intersecting_snps/{wildcards.sample}/{wildcards.sample}.remap.fq.gz {output.fastq1}
 		elif [[ "{params.seq_type}" == "paired" ]]
 		then
-			python {config[wasp_dir]}/mapping/find_intersecting_snps.py 
-			  --is_paired_end
-			  --is_sorted
-			  --output_dir analysis/wasp/find_intersecting_snps/{wildcards.sample} 
-			  --snp_dir analysis/wasp/variants/{wildcards.sample} {input.bam} > {output.log}
+			python {config[wasp_dir]}/mapping/find_intersecting_snps.py  --is_paired_end --is_sorted --output_dir analysis/wasp/find_intersecting_snps/{wildcards.sample} --snp_dir analysis/wasp/variants/{wildcards.sample} {input.bam} > {output.log}
 		fi """
 
 # NOTE: will need to update this if using other aligners
