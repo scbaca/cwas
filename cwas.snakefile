@@ -66,9 +66,9 @@ def get_targets(wildcards):
 	ls.append("analysis/motifs/ai_vs_motifs/motif6.ai.pdf")
 	ls.append("analysis/motifs/ai_vs_motifs/motifX.ai.pdf")
 	ls.append("analysis/predict/results/predict.all.txt")
-	ls.append("analysis/hsq/hsq.summary.txt")
+#	ls.append("analysis/hsq/hsq.summary.txt")
 	ls.append("analysis/fusion/ProstateCancer_Meta_Schumacher2018.nodup/plots/manhattan.pdf")
-	ls.append("analysis/fusion/ProstateCancer_Meta_Schumacher2018.nodup/plots/gwas_twas_cwas_plot.pdf")
+#	ls.append("analysis/fusion/ProstateCancer_Meta_Schumacher2018.nodup/plots/gwas_twas_cwas_plot.pdf")
 	ls.append("analysis/fusion/ProstateCancer_Meta_Schumacher2018.nodup/merged/summary.txt")
 	ls.append("analysis/fusion/ProstateCancer_Meta_Schumacher2018.nodup/postprocess/best/conditioned.summary.txt")
 	ls.append("analysis/fusion/ADT.gwas.chi2/merged/sig/cwas.sig.gwas.restricted.txt")
@@ -95,7 +95,7 @@ rule bams_links_and_index:
 		"samtools index {output.bam_ln}"
 
 rule vcf_link_and_index:
-	"""create links to vcf files and index bam files"""
+	"""subset vcf files to only SNPs and create vcf index"""
 	input:
 		get_vcfs
 	output:
@@ -103,9 +103,9 @@ rule vcf_link_and_index:
 		csi = "vcf_links/{sample}.vcf.gz.csi",
 		tbi = "vcf_links/{sample}.vcf.gz.tbi",
 	shell:
-		"ln -s $PWD/{input} {output.vcf} && "
-		"bcftools index {output.vcf} && "
-		"tabix {output.vcf}"
+		""" bcftools view -i 'TYPE="snp"' -Oz {input} > {output.vcf}
+		bcftools index {output.vcf}
+		tabix {output.vcf} """
 
 rule split_vcf_by_chr:
 	"""split vcf file with SNPs by chromosome"""
@@ -198,8 +198,8 @@ rule merge_bams:
 		keep1 = "analysis/wasp/find_intersecting_snps/{sample}/{sample}.keep.bam",
 		keep2 = "analysis/wasp/filter_remapped_reads/{sample}/{sample}.keep.bam"
 	output:
-		merge = temp("analysis/wasp/merge/{sample}/{sample}.keep.merge.bam"),
-		sort = temp("analysis/wasp/merge/{sample}/{sample}.keep.merge.sort.bam")
+		merge = temp("analysis/wasp/merge/{sample}/{sample}.keep.merge.bam"), 
+		sort = temp("analysis/wasp/merge/{sample}/{sample}.keep.merge.sort.bam") 
 	shell:
 		"samtools merge {output.merge} {input.keep1} {input.keep2}; "
 		"samtools sort -o {output.sort} {output.merge}; "
@@ -230,7 +230,7 @@ rule prep_bam_for_asereader:
 	input:
 		"analysis/wasp/rmdup/{sample}/{sample}.keep.merge.rmdup.sort.bam"
 	output:
-		bam = "analysis/asereader/{sample}/{sample}.remapped.bam",
+		bam = temp("analysis/asereader/{sample}/{sample}.remapped.bam"),
 		bai = "analysis/asereader/{sample}/{sample}.remapped.bam.bai"
 	params:
 		genome = config["dict"]
@@ -251,6 +251,20 @@ rule allele_counts:
 		genome = config["genome"]
 	shell:
 		"sh scripts/ase_readcounter.sh {input.bam} {input.vcf} {params.genome} {output}"
+
+rule consensus_peaks:
+	"""identify consensus peaks from the provided bed files"""
+	input:
+		config["beds"].values()
+	output:
+		"analysis/consensus_peaks/consensus.peaks.stratas.tsv"
+	params:
+		n = config["min_samples_for_peak"],
+		chr_sizes = config["chr_sizes"]
+	shell:
+		""" cat {input} | sort -k1,1 -k2,2n > analysis/consensus_peaks/cat.bed
+		sh scripts/consensus.peaks.sh analysis/consensus_peaks/cat.bed {params.chr_sizes} {params.n}
+		"""
 
 rule prep_peaks:
 	"""prepare files with peak coordinates for use by copywriteR"""
@@ -342,7 +356,7 @@ rule split_counts:
 rule run_stratas:
 	"""identify allelic imbalance with stratAS"""
 	input:
-		peaks = config["peaks"],
+		peaks = "analysis/consensus_peaks/consensus.peaks.stratas.tsv",
 		local_params = "analysis/stratasrun/all.local.params",
 		global_params = "analysis/stratasrun/all.global.params",
 		split = "analysis/stratasrun/split/counts.{split}"
@@ -367,7 +381,6 @@ rule summarize_results:
 	"""summarize allelic imbalance results"""
 	input:
 		"analysis/stratasrun/results/results.all.txt",
-		peaks = config["peaks"]
 	output:
 		"analysis/summary/sig.BOTH.txt",
 		"analysis/summary/bed/sig.BOTH.peak.bed",
@@ -383,7 +396,7 @@ rule summarize_results:
 rule bed_to_gtf:
 	"""convert bed file with peaks to gtf format"""
 	input:
-		config["peaks"]
+		"analysis/consensus_peaks/consensus.peaks.stratas.tsv"
 	output:
 		"analysis/qtl/peaks/peaks.gtf"
 	shell:
@@ -627,10 +640,21 @@ rule combined_test:
 
 # --- rules for testing genetically determined chromatin for eQTL enrichment
 
+#test groups of peaks for GWAS SNP enrichment:
+rule enrich_fg:
+	input:
+		fg="analysis/qtl/summary/peaks/combined.sig.bed",
+		targets = "{features}.bed"
+	output:
+		"analysis/enrich/results/{features}/fg.enrich.txt"
+	shell:
+		" sh scripts/enrich.sh {input.fg} {input.targets} {output} " 
+
+
 rule enrich_permute:
 	"""test groups of peaks for eQTL SNP enrichment"""
 	input:
-		bg = config["peaks"],
+		bg = "analysis/consensus_peaks/consensus.peaks.stratas.tsv",
 		fg = "analysis/qtl/summary/peaks/combined.sig.bed",
 		targets = "{features}.bed"
 	output:
@@ -649,7 +673,7 @@ rule enrich_random_background:
 		""" # concat multiple shuffle results to provide a large sample size for enrich.perm.sh to choose from:
 		printf "" > analysis/enrich/perm/{wildcards.features}/rand/tmp.{wildcards.i}
 		for i in $(seq 1 50); do
-			bedtools shuffle -seed $i -chrom -noOverlapping -i {input.fg} -g ~/ref/hg19/hg19.chrom.sizes.nochr >> analysis/enrich/perm/{wildcards.features}/rand/tmp.{wildcards.i}
+			bedtools shuffle -seed $i -chrom -noOverlapping -i {input.fg} -g config["chr_sizes"] >> analysis/enrich/perm/{wildcards.features}/rand/tmp.{wildcards.i}
 		done
 		sh scripts/enrich.permute.sh {wildcards.i} analysis/enrich/perm/{wildcards.features}/rand/tmp.{wildcards.i} {input.fg} {input.targets} analysis/enrich/perm/{wildcards.features}/rand
 		rm analysis/enrich/perm/{wildcards.features}/rand/tmp.{wildcards.i} """
@@ -709,7 +733,7 @@ rule plot_enrichment:
 rule peak_motifs:
 	"""find top de novo motifs with homer"""
 	input:
-		config["peaks"]
+		"analysis/consensus_peaks/consensus.peaks.stratas.tsv"		
 	output:
 		expand("analysis/motifs/homer/homerResults/motif{i}.motif", i=range(1,7))
 	shell:
@@ -767,7 +791,7 @@ rule prep_stratas_predict:
 rule run_stratas_predict:
 	"""generate chromatin ~ SNP models with stratAS"""
 	input:
-		peaks = config["peaks"],
+		peaks = "analysis/consensus_peaks/consensus.peaks.stratas.tsv",
 		local_params = "analysis/stratasrun/all.local.params",
 		global_params = "analysis/stratasrun/all.global.params",
 		split = "analysis/stratasrun/split/counts.{split}",
@@ -794,7 +818,8 @@ rule run_stratas_predict:
 			--covar {input.covar} \
 			--predict --predict_only \
 			--weights_out "analysis/predict/WEIGHTS" \
-			--seed 123 > analysis/predict/results/predict.{wildcards.split} """
+			--seed 123 > analysis/predict/results/predict.{wildcards.split}
+		"""
 
 rule merge_predict_results:
 	"""merge chromatin models"""
@@ -1028,6 +1053,19 @@ rule compare_gwas:
                 "analysis/fusion/UKB_460K.disease_RESPIRATORY_ENT/merged/cv/cwas.cv.best.txt",
                 "analysis/fusion/UKB_460K.disease_T2D/merged/cv/cwas.cv.best.txt",
 		"analysis/fusion/UKB_460K.disease_HYPOTHYROIDISM_SELF_REP/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.biochemistry_Testosterone_Male/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_EOSINOPHIL_COUNT/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_HIGH_LIGHT_SCATTER_RETICULOCYTE_COUNT/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_LYMPHOCYTE_COUNT/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_MEAN_CORPUSCULAR_HEMOGLOBIN/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_MEAN_PLATELET_VOL/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_MEAN_SPHERED_CELL_VOL/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_MONOCYTE_COUNT/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_PLATELET_COUNT/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_PLATELET_DISTRIB_WIDTH/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_RBC_DISTRIB_WIDTH/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_RED_COUNT/merged/cv/cwas.cv.best.txt",
+		"analysis/fusion/UKB_460K.blood_WHITE_COUNT/merged/cv/cwas.cv.best.txt"
 	output:
 		"analysis/fusion/compare_gwas/compare.gwas.pdf"
 	shell:

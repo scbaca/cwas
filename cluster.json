@@ -5,6 +5,12 @@
         "mem": "4G",
         "time": "01:00:00"
     },
+    "qtl_prep_vcf":
+    {
+        "partition": "short",
+        "mem": "32G",
+        "time": "04:00:00"
+    },
     "stratas_input":
     {
         "partition": "short",
@@ -136,6 +142,6 @@
     {
         "partition": "medium",
         "mem": "4G",
-        "time": "36:00:00"
+        "time": "47:00:00"
     }
 }

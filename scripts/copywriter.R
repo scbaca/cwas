@@ -26,6 +26,12 @@ name=args[2]
 cna.path=args[3]
 bed=args[4]
 
+#tmp for testing:
+#bam.path='analysis/asereader/S002KJH4_H3K27ac'
+#name='S002KJH4_H3K27ac'
+#cna.path='analysis/cna/S002KJH4_H3K27ac'
+#bed='/n/scratch3/users/s/scb20/cwas/blood/cwas/analysis/cna/S002KJH4_H3K27ac/S002KJH4_H3K27ac.peaks.bed'
+
 ncores=8
 
 preCopywriteR(output.folder = file.path(cna.path), bin.size = 400000, ref.genome = "hg19")

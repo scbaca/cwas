@@ -10,4 +10,5 @@ gatk3 -T ASEReadCounter -I $bam \
                 -sites $vcf \
                 -o $out \
                 -R $genome \
-                -minDepth 0
+                -minDepth 0 \
+		-allowPotentiallyMisencodedQuals

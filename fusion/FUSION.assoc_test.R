@@ -48,6 +48,17 @@ set.seed(123) #MODIFICATION
 
 opt = parse_args(OptionParser(option_list=option_list))
 
+#tmp for testing ----
+#opt$sumstats='gwas_data/UKB_460K.blood_RED_COUNT.sumstats.gz'
+#opt$out='analysis/fusion/UKB_460K.blood_RED_COUNT/meta.lasso.20.dat'
+#opt$weights='analysis/fusion/weights.pos' 			
+#opt$weights_dir='analysis/predict/WEIGHTS/'
+#opt$ref_ld_chr='./LDREF/1000G.EUR.'
+#opt$chr=20
+#opt$force_model='top1.as'
+#---
+
+
 allele.qc = function(a1,a2,ref1,ref2) {
         a1 = toupper(a1)
         a2 = toupper(a2)
@@ -315,7 +326,8 @@ for ( w in 1:nrow(wgtlist) ) {
 		out.tbl$EQTL.Z[w] =  NA
 		out.tbl$EQTL.GWAS.Z[w] = NA
 	} else {
-		topeqtl = which.max( wgt.matrix[,eqtlmod]^2 )
+		topeqtl = which.max( wgt.matrix[,eqtlmod]^2 ) 
+		if(nrow(wgt.matrix) == 1) names(topeqtl) = rownames(wgt.matrix) # SCB MOD: readd the SNP name - it gets dropped if there's only one SNP
 		out.tbl$EQTL.ID[w] = names( topeqtl )
 		out.tbl$EQTL.R2[w] = cv.performance[1,eqtlmod]
 		out.tbl$EQTL.Z[w] = wgt.matrix[ topeqtl , eqtlmod ]
