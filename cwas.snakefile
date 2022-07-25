@@ -640,7 +640,6 @@ rule combined_test:
 
 # --- rules for testing genetically determined chromatin for eQTL enrichment
 
-#test groups of peaks for GWAS SNP enrichment:
 rule enrich_fg:
 	input:
 		fg="analysis/qtl/summary/peaks/combined.sig.bed",
